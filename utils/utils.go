@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bufio"
+	"encoding/csv"
+	"errors"
 	"os"
 	"regexp"
 
@@ -34,4 +36,28 @@ func GetAccounts(BeancountLedger string) []models.Account {
 		}
 	}
 	return accounts
+}
+
+func ReadCsvFile(filePath string) ([][]string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"File":  filePath,
+			"Error": err,
+		}).Error("Unable to read input file")
+		return [][]string{}, errors.New("Failed to read CSV")
+	}
+	defer f.Close()
+
+	csvReader := csv.NewReader(f)
+	csvReader.Comma = ';'
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"File":  filePath,
+			"Error": err,
+		}).Error("Unable to read input file")
+		return [][]string{}, errors.New("Failed to parse CSV")
+	}
+	return records, nil
 }

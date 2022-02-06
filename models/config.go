@@ -14,6 +14,7 @@ type Config struct {
 	MappingFile       string `yaml:"mappings_file"`
 	OutputFile        string `yaml:"output_file"`
 	CSVFile           string `yaml:"csv_file"`
+	CSVType           string `yaml:"csv_type"`
 	BeancountLedger   string `yaml:"ledger"`
 	StartDate         string `yaml:"from_date,omitempty"`
 	EndDate           string `yaml:"until_date,omitempty"`
@@ -21,16 +22,9 @@ type Config struct {
 	InternalEndDate   time.Time
 }
 
-func ReadConfig(configFile string) (Config, error) {
+func parseConfig(yamlData []byte) (Config, error) {
 	var config Config
-	yamlFile, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not read config file")
-		return config, errors.New("Failed to validate config file")
-	}
-	err = yaml.Unmarshal(yamlFile, &config)
+	err := yaml.Unmarshal(yamlData, &config)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"Error": err,
@@ -42,6 +36,9 @@ func ReadConfig(configFile string) (Config, error) {
 	}
 	if config.CSVFile == "" {
 		config.CSVFile = "statement.csv"
+	}
+	if config.CSVType == "" {
+		config.CSVType = "swedbank"
 	}
 	if config.BeancountLedger == "" {
 		config.BeancountLedger = "ledger.beancount"
@@ -71,4 +68,18 @@ func ReadConfig(configFile string) (Config, error) {
 		config.InternalEndDate = d
 	}
 	return config, nil
+
+}
+
+func ReadConfig(configFile string) (Config, error) {
+	var config Config
+	yamlFile, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"Error": err,
+		}).Error("Could not read config file")
+		return config, errors.New("Failed to validate config file")
+	}
+	config, err = parseConfig(yamlFile)
+	return config, err
 }

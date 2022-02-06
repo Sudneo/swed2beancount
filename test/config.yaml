@@ -1,0 +1,6 @@
+ledger: "ledger.beancount"
+csv_file: "swedbank_statement.csv"
+mappings_file: "mappings.yaml"
+output_file: "shared.beancount"
+from_date: "2021-01-01"
+until_date: "2021-12-30"

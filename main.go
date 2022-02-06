@@ -1,16 +1,14 @@
 package main
 
 import (
-	"encoding/csv"
 	"errors"
 	"flag"
 	"os"
-	"strconv"
-	"strings"
 	"text/template"
 	"time"
 
 	"git.home.lab/daniele/swed2beancount/models"
+	"git.home.lab/daniele/swed2beancount/parsers"
 	"git.home.lab/daniele/swed2beancount/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,84 +17,6 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
-}
-
-func readCsvFile(filePath string) ([][]string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"File":  filePath,
-			"Error": err,
-		}).Error("Unable to read input file")
-		return [][]string{}, errors.New("Failed to read CSV")
-	}
-	defer f.Close()
-
-	csvReader := csv.NewReader(f)
-	csvReader.Comma = ';'
-	records, err := csvReader.ReadAll()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"File":  filePath,
-			"Error": err,
-		}).Error("Unable to read input file")
-		return [][]string{}, errors.New("Failed to parse CSV")
-	}
-	return records, nil
-}
-
-func ParseCSV(file string) ([]models.Transaction, error) {
-	var transactions []models.Transaction
-	records, err := readCsvFile(file)
-	if err != nil {
-		log.Error("Failed to parse CSV")
-		return transactions, err
-	}
-	for _, record := range records[2:] {
-		log.WithFields(log.Fields{
-			"Date":        record[2],
-			"Beneficiary": record[3],
-			"Details":     record[4],
-			"Amount":      record[5],
-			"Currency":    record[6],
-			"Type":        record[7],
-		}).Debug("New Transaction")
-		t := models.Transaction{}
-		if record[7] == "K" {
-			t.Type = "credit"
-		} else {
-			t.Type = "debit"
-		}
-		layout := "02.01.2006"
-		d, err := time.Parse(layout, record[2])
-		if err != nil {
-			log.WithFields(log.Fields{
-				"Date":   record[2],
-				"Error":  err,
-				"Layout": layout,
-			}).Error("Failed to parse date")
-			return transactions, errors.New("Failed to parse CSV")
-		}
-		t.Date = d
-		t.Beneficiary = record[3]
-		t.Description = record[4]
-		correctedAmount := strings.Replace(record[5], ",", ".", 1)
-		t.Amount, err = strconv.ParseFloat(correctedAmount, 64)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"Amount": record[5],
-				"Error":  err,
-			}).Error("Failed to parse amount")
-			return transactions, errors.New("Failed to parse CSV")
-		}
-		t.Currency = record[6]
-		if t.Description == "Turnover" || t.Description == "closing balance" || t.Description == "Accrued interest" {
-			log.Debug("Skipping meta-transaction")
-			continue
-		}
-		transactions = append(transactions, t)
-	}
-	return transactions, nil
 }
 
 func ProcessTransactions(t []models.Transaction, defaultAccount models.Account, mappings models.Mappings) []models.Transaction {
@@ -136,9 +56,6 @@ func FilterTransactionsByDate(startDate time.Time, endDate time.Time, transactio
 }
 
 func GenerateOutput(outfile string, transactions []models.Transaction) error {
-	// 2020-01-03 * "HTB subscription"
-	// Expenses:EE:Personal:Study 11.96 EUR
-	// Assets:EE:Bank:Personal:Checking -11.96 EUR
 	PageData := `{{ range . }}
 {{ .Date.Format "2006-01-02" }} * "{{ .Description }}"
 	{{ .CreditAccount.Name }} {{ .Amount }} {{ .Currency }}
@@ -171,17 +88,20 @@ func Run(config models.Config, defaultAccount models.Account) error {
 	}
 	m.ValidateMappings(accounts)
 	log.Info("Mappings validated")
-	transactions, err := ParseCSV(config.CSVFile)
+	transactions, err := parsers.ParseCSV(config.CSVFile, config.CSVType)
 	if err != nil {
 		return err
 	}
 	log.WithFields(log.Fields{
 		"Transactions": len(transactions),
 	}).Info("Found and parsed transactions")
-	transactions = ProcessTransactions(transactions, defaultAccount, m)
 	if config.StartDate != "" && config.EndDate != "" {
 		transactions = FilterTransactionsByDate(config.InternalStartDate, config.InternalEndDate, transactions)
+		if len(transactions) == 0 {
+			log.Warning("The Start/End date specified in the configuration file are filtering out all the transactions.")
+		}
 	}
+	transactions = ProcessTransactions(transactions, defaultAccount, m)
 	err = GenerateOutput(config.OutputFile, transactions)
 	if err != nil {
 		return err

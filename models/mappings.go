@@ -26,23 +26,19 @@ type Mapping struct {
 	InternalDateEnd     time.Time
 }
 
-func parseDate(date string) time.Time {
-	return time.Now()
-}
-
 func ReadMapping(file string) (Mappings, error) {
 	var m Mappings
 	yamlFile, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"Error": err,
-		}).Fatal("Could not read config file")
+		}).Fatal("Could not read mapping file")
 	}
 	err = yaml.Unmarshal(yamlFile, &m)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"Error": err,
-		}).Fatal("Could not parse config file.")
+		}).Fatal("Could not parse mapping file.")
 	}
 	return m, nil
 }
@@ -109,6 +105,19 @@ func (m *Mappings) ValidateMappings(accounts []Account) error {
 			}
 			mapping.InternalDateEnd = d
 		}
+		if mapping.Type == "text" && mapping.Contains == "" {
+			log.WithFields(log.Fields{
+				"Field": "Contains",
+				"Value": mapping.Contains,
+			}).Error("Cannot use empty 'contains' in a text mapping")
+			return errors.New("Failed to validate mappings")
+		} else if mapping.Type == "date" && (mapping.DateBegin == "" || mapping.DateEnd == "") {
+			log.WithFields(log.Fields{
+				"Field": "Dates",
+			}).Error("Cannot use empty 'dates' in a date mapping")
+			return errors.New("Failed to validate mappings")
+		}
+
 	}
 	return nil
 }

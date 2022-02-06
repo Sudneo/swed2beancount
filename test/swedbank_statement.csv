@@ -1,0 +1,8 @@
+"Client account";"Row type";"Date";"Beneficiary/Payer";"Details";"Amount";"Currency";"Debit/Credit";"Transfer reference";"Transaction type";"Reference number";"Document number";
+"EE000000000000000000";"10";"01.01.2021";"";"Opening balance";"100";"EUR";"K";"";"AS";"";"";
+"EE000000000000000000";"20";"08.01.2021";"RIMI EESTI FOOD AS";"Order 1000000000";"75,78";"EUR";"D";"";"MK";"";"5";
+"EE000000000000000000";"20";"05.02.2021";"MAXIMA";"MAXIMA Tallinn ";"43,58";"EUR";"D";"";"K";"";"";
+"EE000000000000000000";"20";"27.02.2021";"";"Kaardi kuutasu 02.2021";"0,40";"EUR";"D";"";"M";"";"";
+"EE000000000000000000";"82";"17.12.2021";"";"Turnover";"1000";"EUR";"D";"";"K2";"";"";
+"EE000000000000000000";"82";"17.12.2021";"";"Turnover";"2000";"EUR";"K";"";"K2";"";"";
+"EE000000000000000000";"86";"17.12.2021";"";"closing balance";"150";"EUR";"K";"";"LS";"";"";

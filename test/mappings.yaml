@@ -1,0 +1,26 @@
+- type: text
+  contains: "HACKTHEBOX"
+  field: "beneficiary"
+  account: "Expenses:HTB"
+  desc_override: "Hackthebox Subscription"
+- type: text
+  contains: "RIMI EESTI FOOD AS"
+  field: "details"
+  account: "Expenses:Food:Groceries"
+  desc_override: "Grocery - Rimi"
+- type: amount
+  amount: "457.89"
+  desc_override: "Rent"
+  account: "Expenses:House"
+- type: date
+  date_begin: "2021-06-01"
+  date_end: "2021-07-01"
+  desc_override: "Trip to Saturn"
+  account: "Expenses:Trip"
+- type: text
+  contains: "salary"
+  desc_override: "Monthly Salary"
+  account: "Income:Salary"
+
+
+

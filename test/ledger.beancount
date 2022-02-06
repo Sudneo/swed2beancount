@@ -1,0 +1,32 @@
+* Options ; Beancount options
+
+option "title" "Test Ledger"
+option "operating_currency" "EUR"
+
+; Accounts 
+
+2020-01-01 open Assets:Bank:Personal:Checking EUR
+2020-01-01 open Assets:Bank:Shared:Checking EUR
+2020-01-01 open Assets:Bank:Personal:Saving EUR
+2020-01-01 open Assets:Bank:Personal:Investing EUR
+2020-01-01 open Assets:Cash EUR
+2020-01-01 open Liabilities:Bank:HouseLoan EUR
+2020-01-01 open Income:Salary EUR
+2020-01-01 open Income:Bank:Interests EUR
+2020-01-01 open Income:Gifts EUR
+2020-01-01 open Expenses:Trip EUR
+2020-01-01 open Expenses:HTB EUR
+2020-01-01 open Expenses:Food:Groceries EUR
+2020-01-01 open Expenses:House EUR
+2020-01-01 open Expenses:House:Utilities EUR
+2020-01-01 open Expenses:Personal:Pleasure EUR
+2020-01-01 open Expenses:Bank:DebitCardFee EUR
+2020-01-01 open Equity:Opening-Balances
+
+2020-01-01 * "Opening Balances" 
+    Assets:Bank:Personal:Checking 0 EUR
+    Assets:Bank:Personal:Saving 1000 EUR
+    Assets:Bank:Shared:Checking 300 EUR
+    Liabilities:Bank:HouseLoan -100000 EUR
+    Equity:Opening-Balances
+
