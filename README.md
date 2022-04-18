@@ -66,6 +66,12 @@ csv_type: swedbank
 
 The `type` can be `text`, `amount` and `date`. The matching is done from top to bottom, which means that if multiple rules match, the first match will be the used one. For this, consider moving the `date` matches upper.
 
+The matching can be used as follows:
+
+* `text` matches can be used for transactions that have some kind of string in the remitter/beneficiary or description.
+* `date` matches can be used for example for trips. All transactions in the specified date range will be assigned to the specified account.
+* `amount` matches are for recurring transactions with exactly the same cost.
+
 If the match is of type `text` then additional fields need to be set:
 
 * `contains`: The string to search
@@ -75,10 +81,9 @@ If the match is of type `date`, then additional fields need to be set:
 * `date_begin`: formatted `YYYY-MM-DD`
 * `date_end`: formatted `YYYY-MM-DD`
 
-In any case the `amount` field needs to be specified and needs to match a beancount account present in the ledger specified in the config file.
+In any case the `account` field needs to be specified and needs to match a beancount account present in the ledger specified in the config file.
 
 Additionally, the `desc_override` can be set to override the description for the transaction that matches that particular rule. If not specified, the details/description available in the CSV will be used.
-
 
 4. Run the tool
 
