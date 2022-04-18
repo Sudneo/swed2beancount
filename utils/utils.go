@@ -7,7 +7,7 @@ import (
 	"os"
 	"regexp"
 
-	"git.home.lab/daniele/swed2beancount/models"
+	"github.com/sudneo/swed2beancount/models"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -7,9 +7,9 @@ import (
 	"text/template"
 	"time"
 
-	"git.home.lab/daniele/swed2beancount/models"
-	"git.home.lab/daniele/swed2beancount/parsers"
-	"git.home.lab/daniele/swed2beancount/utils"
+	"github.com/sudneo/swed2beancount/models"
+	"github.com/sudneo/swed2beancount/parsers"
+	"github.com/sudneo/swed2beancount/utils"
 	log "github.com/sirupsen/logrus"
 )
 

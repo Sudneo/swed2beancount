@@ -1,4 +1,4 @@
-module git.home.lab/daniele/swed2beancount
+module github.com/sudneo/swed2beancount
 
 go 1.16
 
