@@ -7,10 +7,10 @@ import (
 	"text/template"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/sudneo/swed2beancount/models"
 	"github.com/sudneo/swed2beancount/parsers"
 	"github.com/sudneo/swed2beancount/utils"
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -77,7 +77,12 @@ func GenerateOutput(outfile string, transactions []models.Transaction) error {
 	return nil
 }
 
-func Run(config models.Config, defaultAccount models.Account) error {
+func Run(config models.Config) error {
+	if config.DefaultAccount == "" {
+		log.Error("The Default account should be provided either through command-line flag or through the config file.")
+		panic("No default account")
+	}
+	defaultAccount := models.Account{Name: config.DefaultAccount}
 	accounts := utils.GetAccounts(config.BeancountLedger)
 	log.WithFields(log.Fields{
 		"Accounts": len(accounts),
@@ -111,7 +116,7 @@ func Run(config models.Config, defaultAccount models.Account) error {
 
 func main() {
 	configPtr := flag.String("config", "config.yaml", "The config file to use")
-	accountPtr := flag.String("a", "Assets:EE:Bank:Personal:Checking", "The default beancount account to use for the CSV transactions")
+	accountPtr := flag.String("a", "", "The default beancount account to use for the CSV transactions")
 	verbosePtr := flag.Bool("v", false, "Set logging to Debug level")
 
 	flag.Parse()
@@ -119,14 +124,16 @@ func main() {
 	if *verbosePtr {
 		log.SetLevel(log.DebugLevel)
 	}
-
-	acc := models.Account{Name: *accountPtr}
 	c, err := models.ReadConfig(*configPtr)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	err = Run(c, acc)
+	// The default account flag should override the config one if it exists
+	if *accountPtr != "" {
+		c.DefaultAccount = *accountPtr
+	}
+	err = Run(c)
 
 	if err != nil {
 		log.Error(err)

@@ -18,6 +18,7 @@ type Config struct {
 	BeancountLedger   string `yaml:"ledger"`
 	StartDate         string `yaml:"from_date,omitempty"`
 	EndDate           string `yaml:"until_date,omitempty"`
+	DefaultAccount    string `yaml:"default_account,omitempty"`
 	InternalStartDate time.Time
 	InternalEndDate   time.Time
 }
