@@ -1,0 +1,5 @@
+"Client account";"Row type";"Date";"Beneficiary/Payer";"Details";"Amount";"Currency";"Debit/Credit";"Transfer reference";"Transaction type";"Reference number";"Document number";
+"EE000000000000000001";"10";"01.01.2021";"";"Opening balance";"300";"EUR";"K";"";"AS";"";"";
+"EE000000000000000001";"20";"28.02.2021";"JOHN DOE";"Monthly contribution";"50";"EUR";"K";"";"MK";"";"";
+"EE000000000000000001";"82";"28.02.2021";"";"Turnover";"50";"EUR";"K";"";"K2";"";"";
+"EE000000000000000001";"86";"28.02.2021";"";"closing balance";"350";"EUR";"K";"";"LS";"";"";

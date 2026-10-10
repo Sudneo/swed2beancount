@@ -1,86 +1,81 @@
 package models
 
 import (
+	"bytes"
 	"errors"
-	"io/ioutil"
+	"fmt"
+	"io"
+	"os"
+	"slices"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
+// Date is a calendar date read from YAML in YYYY-MM-DD format.
+type Date struct{ time.Time }
+
+func (d *Date) UnmarshalYAML(n *yaml.Node) error {
+	t, err := time.Parse("2006-01-02", n.Value)
+	if err != nil {
+		return fmt.Errorf("invalid date %q (want YYYY-MM-DD): %w", n.Value, err)
+	}
+	d.Time = t
+	return nil
+}
+
 type Config struct {
-	MappingFile       string `yaml:"mappings_file"`
-	OutputFile        string `yaml:"output_file"`
-	CSVFile           string `yaml:"csv_file"`
-	CSVType           string `yaml:"csv_type"`
-	BeancountLedger   string `yaml:"ledger"`
-	StartDate         string `yaml:"from_date,omitempty"`
-	EndDate           string `yaml:"until_date,omitempty"`
-	DefaultAccount    string `yaml:"default_account,omitempty"`
-	InternalStartDate time.Time
-	InternalEndDate   time.Time
+	MappingFile     string `yaml:"mappings_file"`
+	OutputFile      string `yaml:"output_file"`
+	BeancountLedger string `yaml:"ledger"`
+	StartDate       Date   `yaml:"from_date,omitempty"`
+	EndDate         Date   `yaml:"until_date,omitempty"`
+	// Statements are the CSV files to import, as paths or glob patterns.
+	Statements []string `yaml:"statements"`
+	// Accounts maps the IBAN of each account to its beancount account.
+	Accounts map[string]string `yaml:"accounts"`
 }
 
 func parseConfig(yamlData []byte) (Config, error) {
-	var config Config
-	err := yaml.Unmarshal(yamlData, &config)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not parse config file.")
-		return config, errors.New("Failed to validate config file")
+	config := Config{
+		MappingFile:     "mappings.yaml",
+		BeancountLedger: "ledger.beancount",
 	}
-	if config.MappingFile == "" {
-		config.MappingFile = "mappings.yaml"
-	}
-	if config.CSVFile == "" {
-		config.CSVFile = "statement.csv"
-	}
-	if config.CSVType == "" {
-		config.CSVType = "swedbank"
-	}
-	if config.BeancountLedger == "" {
-		config.BeancountLedger = "ledger.beancount"
-	}
-	if config.StartDate != "" {
-		layout := "2006-01-02"
-		d, err := time.Parse(layout, config.StartDate)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"Field": "StartDate",
-				"Value": config.StartDate,
-			}).Error("Invalid date specified")
-			return config, errors.New("Failed to validate config")
-		}
-		config.InternalStartDate = d
-	}
-	if config.EndDate != "" {
-		layout := "2006-01-02"
-		d, err := time.Parse(layout, config.EndDate)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"Field": "EndDate",
-				"Value": config.EndDate,
-			}).Error("Invalid date specified")
-			return config, errors.New("Failed to validate config")
-		}
-		config.InternalEndDate = d
+	// Reject unknown keys, so that old options (e.g., "csv_file" or
+	// "default_account") are reported.
+	decoder := yaml.NewDecoder(bytes.NewReader(yamlData))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&config); err != nil && !errors.Is(err, io.EOF) {
+		return config, err
 	}
 	return config, nil
-
 }
 
 func ReadConfig(configFile string) (Config, error) {
-	var config Config
-	yamlFile, err := ioutil.ReadFile(configFile)
+	data, err := os.ReadFile(configFile)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not read config file")
-		return config, errors.New("Failed to validate config file")
+		return Config{}, fmt.Errorf("reading config: %w", err)
 	}
-	config, err = parseConfig(yamlFile)
-	return config, err
+	config, err := parseConfig(data)
+	if err != nil {
+		return Config{}, fmt.Errorf("parsing config %s: %w", configFile, err)
+	}
+	return config, nil
+}
+
+// Validate checks that statements and accounts are configured and that the
+// accounts are opened in the ledger.
+func (c Config) Validate(ledgerAccounts []string) error {
+	if len(c.Statements) == 0 {
+		return errors.New("no statements configured")
+	}
+	if len(c.Accounts) == 0 {
+		return errors.New("no accounts configured")
+	}
+	for iban, account := range c.Accounts {
+		if !slices.Contains(ledgerAccounts, account) {
+			return fmt.Errorf("account %q for %s is not opened in the ledger", account, iban)
+		}
+	}
+	return nil
 }

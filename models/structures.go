@@ -1,91 +1,71 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/text/language"
-	"golang.org/x/text/search"
 )
 
-type Account struct {
-	Name string
+// Cents is a monetary amount in hundredths, to avoid float rounding issues.
+type Cents int64
+
+func (c Cents) String() string {
+	sign := ""
+	if c < 0 {
+		sign, c = "-", -c
+	}
+	return fmt.Sprintf("%s%d.%02d", sign, c/100, c%100)
 }
 
 type Transaction struct {
+	// ClientAccount is the IBAN of the account the statement belongs to.
+	ClientAccount string
 	Type          string
-	CreditAccount Account
-	DebitAccount  Account
-	Amount        float64
+	CreditAccount string
+	DebitAccount  string
+	Amount        Cents
 	Description   string
 	Currency      string
 	Beneficiary   string
 	Date          time.Time
 }
 
-func stringMatch(str string, substr string) bool {
-	m := search.New(language.Und, search.IgnoreCase)
-	start, _ := m.IndexString(str, substr)
-	if start == -1 {
-		return false
-	}
-	return true
+// Balance is a balance assertion. Date is the date of the beancount
+// directive, which is checked at the beginning of that day.
+type Balance struct {
+	ClientAccount string
+	Account       string
+	Date          time.Time
+	Amount        Cents
+	Currency      string
 }
 
-func (t *Transaction) Categorize(m Mappings) (string, string) {
+func containsFold(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
 
-	// Returns the account of the first mapping match, if no match, returns an empty account
-	matchAccount := ""
-	descriptionOverride := ""
+// Categorize returns the account and description override of the first
+// matching mapping, or empty strings if no mapping matches.
+func (t Transaction) Categorize(m Mappings) (string, string) {
 	for _, mapping := range m {
-		// Text Matching
-		if mapping.Type == "text" {
-			matchBeneficiary := stringMatch(t.Beneficiary, mapping.Contains)
-			matchDetails := stringMatch(t.Description, mapping.Contains)
-			if mapping.Field == "beneficiary" && matchBeneficiary {
-				// Match beneficiary text
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Beneficiary",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			}
-			if mapping.Field == "details" && matchDetails {
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Details",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			} else {
-				if matchDetails || matchBeneficiary {
-					log.WithFields(log.Fields{
-						"Match": mapping.Account,
-						"Type":  "Text",
-					}).Debug("Found match for transaction")
-					return mapping.Account, mapping.DescriptionOverride
-				}
-			}
+		var matched bool
+		switch mapping.Field {
+		case "beneficiary":
+			matched = containsFold(t.Beneficiary, mapping.Contains)
+		case "details":
+			matched = containsFold(t.Description, mapping.Contains)
+		default:
+			matched = containsFold(t.Beneficiary, mapping.Contains) || containsFold(t.Description, mapping.Contains)
 		}
-		// Amount Matching
-		if mapping.Type == "amount" {
-			if t.Amount == mapping.Amount {
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Amount",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			}
-		}
-		// DateMatching
-		if mapping.Type == "date" {
-			if t.Date.After(mapping.InternalDateBegin) && t.Date.Before(mapping.InternalDateEnd) {
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Date",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			}
+		if matched {
+			log.WithFields(log.Fields{
+				"Match": mapping.Account,
+				"Field": mapping.Field,
+			}).Debug("Found match for transaction")
+			return mapping.Account, mapping.DescriptionOverride
 		}
 	}
-	return matchAccount, descriptionOverride
+	return "", ""
 }
