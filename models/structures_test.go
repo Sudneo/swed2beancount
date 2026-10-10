@@ -32,3 +32,12 @@ func TestCategorizeFirstMatchWins(t *testing.T) {
 		t.Errorf("Got %q/%q, expected %q/%q", account, desc, "Expenses:Food", "Grocery")
 	}
 }
+
+func TestCentsString(t *testing.T) {
+	cases := map[Cents]string{0: "0.00", 40: "0.40", 7578: "75.78", 30000: "300.00", -5: "-0.05", -23024: "-230.24"}
+	for c, want := range cases {
+		if got := c.String(); got != want {
+			t.Errorf("Cents(%d): got %q, expected %q", int64(c), got, want)
+		}
+	}
+}

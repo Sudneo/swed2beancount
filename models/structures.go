@@ -1,21 +1,45 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
+// Cents is a monetary amount in hundredths, to avoid float rounding issues.
+type Cents int64
+
+func (c Cents) String() string {
+	sign := ""
+	if c < 0 {
+		sign, c = "-", -c
+	}
+	return fmt.Sprintf("%s%d.%02d", sign, c/100, c%100)
+}
+
 type Transaction struct {
+	// ClientAccount is the IBAN of the account the statement belongs to.
+	ClientAccount string
 	Type          string
 	CreditAccount string
 	DebitAccount  string
-	Amount        float64
+	Amount        Cents
 	Description   string
 	Currency      string
 	Beneficiary   string
 	Date          time.Time
+}
+
+// Balance is a balance assertion. Date is the date of the beancount
+// directive, which is checked at the beginning of that day.
+type Balance struct {
+	ClientAccount string
+	Account       string
+	Date          time.Time
+	Amount        Cents
+	Currency      string
 }
 
 func containsFold(s, substr string) bool {
