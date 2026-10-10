@@ -39,49 +39,27 @@ func (t *Transaction) Categorize(m Mappings) (string, string) {
 	descriptionOverride := ""
 	for _, mapping := range m {
 		// Text Matching
-		if mapping.Type == "text" {
-			matchBeneficiary := stringMatch(t.Beneficiary, mapping.Contains)
-			matchDetails := stringMatch(t.Description, mapping.Contains)
-			if mapping.Field == "beneficiary" && matchBeneficiary {
-				// Match beneficiary text
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Beneficiary",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			}
-			if mapping.Field == "details" && matchDetails {
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Details",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			} else {
-				if matchDetails || matchBeneficiary {
-					log.WithFields(log.Fields{
-						"Match": mapping.Account,
-						"Type":  "Text",
-					}).Debug("Found match for transaction")
-					return mapping.Account, mapping.DescriptionOverride
-				}
-			}
+		matchBeneficiary := stringMatch(t.Beneficiary, mapping.Contains)
+		matchDetails := stringMatch(t.Description, mapping.Contains)
+		if mapping.Field == "beneficiary" && matchBeneficiary {
+			// Match beneficiary text
+			log.WithFields(log.Fields{
+				"Match": mapping.Account,
+				"Type":  "Beneficiary",
+			}).Debug("Found match for transaction")
+			return mapping.Account, mapping.DescriptionOverride
 		}
-		// Amount Matching
-		if mapping.Type == "amount" {
-			if t.Amount == mapping.Amount {
+		if mapping.Field == "details" && matchDetails {
+			log.WithFields(log.Fields{
+				"Match": mapping.Account,
+				"Type":  "Details",
+			}).Debug("Found match for transaction")
+			return mapping.Account, mapping.DescriptionOverride
+		} else {
+			if matchDetails || matchBeneficiary {
 				log.WithFields(log.Fields{
 					"Match": mapping.Account,
-					"Type":  "Amount",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			}
-		}
-		// DateMatching
-		if mapping.Type == "date" {
-			if t.Date.After(mapping.InternalDateBegin) && t.Date.Before(mapping.InternalDateEnd) {
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Date",
+					"Type":  "Text",
 				}).Debug("Found match for transaction")
 				return mapping.Account, mapping.DescriptionOverride
 			}
