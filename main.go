@@ -56,28 +56,6 @@ func processTransactions(transactions []models.Transaction, accounts map[string]
 	return processed, nil
 }
 
-// removeDuplicates drops the transactions with the same date, amount and
-// accounts as a previous one from a different statement account. This is the
-// case of transfers between own accounts, which appear in both statements.
-func removeDuplicates(transactions []models.Transaction) []models.Transaction {
-	var unique []models.Transaction
-	for _, t := range transactions {
-		if slices.ContainsFunc(unique, func(u models.Transaction) bool {
-			return u.ClientAccount != t.ClientAccount && u.Date.Equal(t.Date) && u.Amount == t.Amount &&
-				u.DebitAccount == t.DebitAccount && u.CreditAccount == t.CreditAccount
-		}) {
-			log.WithFields(log.Fields{
-				"Date":        t.Date.Format("2006-01-02"),
-				"Description": t.Description,
-				"Amount":      t.Amount,
-			}).Info("Skipping duplicate transaction")
-			continue
-		}
-		unique = append(unique, t)
-	}
-	return unique
-}
-
 // filterTransactionsByDate keeps the transactions within [start, end].
 // A zero start or end leaves that side of the range open.
 func filterTransactionsByDate(start, end time.Time, transactions []models.Transaction) []models.Transaction {
@@ -160,7 +138,6 @@ func run(config models.Config) error {
 	if len(transactions) == 0 {
 		log.Warning("No transactions to write. Check the from_date/until_date range.")
 	}
-	transactions = removeDuplicates(transactions)
 	slices.SortStableFunc(transactions, func(a, b models.Transaction) int {
 		return a.Date.Compare(b.Date)
 	})

@@ -12,6 +12,3 @@
 - contains: "JOINT ACCOUNT"
   field: "beneficiary"
   account: "Assets:Bank:Shared:Checking"
-- contains: "JOHN DOE"
-  field: "beneficiary"
-  account: "Assets:Bank:Personal:Checking"

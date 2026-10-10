@@ -7,7 +7,6 @@ This simple tool is just some util I wrote to help importing CSV files into bean
 * Imports the statements of multiple accounts at once
 * Mapping between CSV transaction and Beancount accounts
     * Text match (on remitter/beneficiary and/or on the details/description)
-* Duplicate transactions (e.g., transfers between your own accounts, which appear in both statements) are imported once
 * Balance assertions generated from the opening and closing balances of the statements
 * Automatically generate beancount-like file 
 * Validates data in configuration and mappings (e.g., invalid account name)
@@ -70,7 +69,7 @@ Each rule has the following fields:
 
 The `account` field always needs to be specified and needs to match a beancount account present in the ledger specified in the config file.
 
-A rule can map to one of your own accounts (e.g., the shared account) to categorize transfers between them. Such a transfer appears in both statements: when both sides are mapped to the other account, they result in two transactions with the same date, amount and accounts, and only the first one is kept.
+A rule can map to one of your own accounts (e.g., the shared account) to categorize transfers between them. Note that such a transfer appears in the statements of both accounts, so it is imported twice: one of the two transactions needs to be removed manually.
 
 Additionally, the `desc_override` can be set to override the description for the transaction that matches that particular rule. If not specified, the details/description available in the CSV will be used.
 

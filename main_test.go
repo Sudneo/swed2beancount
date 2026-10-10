@@ -71,32 +71,6 @@ func TestProcessTransactionsUnknownAccount(t *testing.T) {
 	}
 }
 
-func TestRemoveDuplicates(t *testing.T) {
-	// A transfer from the checking to the shared account, as seen from both statements
-	debit := models.Transaction{ClientAccount: "EE01", Amount: 5000, Date: date("2021-02-28"),
-		DebitAccount: "Assets:Bank:Checking", CreditAccount: "Assets:Bank:Shared"}
-	credit := debit
-	credit.ClientAccount = "EE02"
-	cases := []struct {
-		name   string
-		mutate func(c *models.Transaction)
-		want   int
-	}{
-		{"duplicate", func(c *models.Transaction) {}, 1},
-		{"same statement account", func(c *models.Transaction) { c.ClientAccount = "EE01" }, 2},
-		{"different amount", func(c *models.Transaction) { c.Amount = 4999 }, 2},
-		{"different date", func(c *models.Transaction) { c.Date = date("2021-03-01") }, 2},
-		{"different accounts", func(c *models.Transaction) { c.DebitAccount = uncategorizedAccount }, 2},
-	}
-	for _, c := range cases {
-		cr := credit
-		c.mutate(&cr)
-		if got := removeDuplicates([]models.Transaction{debit, cr}); len(got) != c.want {
-			t.Errorf("%s: got %d transactions, expected %d", c.name, len(got), c.want)
-		}
-	}
-}
-
 func TestProcessBalances(t *testing.T) {
 	balances := []models.Balance{
 		{ClientAccount: "EE02", Date: date("2021-01-01")},
@@ -164,6 +138,10 @@ func TestRun(t *testing.T) {
 2021-02-27 * "Kaardi kuutasu 02.2021"
 	UNCATEGORIZED_ACCOUNT 0.40 EUR
 	Assets:Bank:Personal:Checking -0.40 EUR
+
+2021-02-28 * "Monthly contribution"
+	Assets:Bank:Shared:Checking 50.00 EUR
+	UNCATEGORIZED_ACCOUNT -50.00 EUR
 
 2021-02-28 * "Monthly contribution"
 	Assets:Bank:Shared:Checking 50.00 EUR
