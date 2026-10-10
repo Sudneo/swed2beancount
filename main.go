@@ -100,8 +100,8 @@ func Run(config models.Config) error {
 	log.WithFields(log.Fields{
 		"Transactions": len(transactions),
 	}).Info("Found and parsed transactions")
-	if config.StartDate != "" && config.EndDate != "" {
-		transactions = FilterTransactionsByDate(config.InternalStartDate, config.InternalEndDate, transactions)
+	if !config.StartDate.IsZero() && !config.EndDate.IsZero() {
+		transactions = FilterTransactionsByDate(config.StartDate.Time, config.EndDate.Time, transactions)
 		if len(transactions) == 0 {
 			log.Warning("The Start/End date specified in the configuration file are filtering out all the transactions.")
 		}

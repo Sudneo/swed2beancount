@@ -31,14 +31,32 @@ until_date: "2021-12-30"`)
 	}
 	dateStartExpected, _ := time.Parse("2006-01-02", "2021-12-01")
 	dateEndExpected, _ := time.Parse("2006-01-02", "2021-12-30")
-	if config.InternalStartDate != dateStartExpected && config.InternalEndDate != dateEndExpected {
-		t.Errorf("Date parsing is incorrect")
+	if !config.StartDate.Equal(dateStartExpected) || !config.EndDate.Equal(dateEndExpected) {
+		t.Errorf("Date parsing is incorrect. Got %v - %v, expected %v - %v", config.StartDate, config.EndDate, dateStartExpected, dateEndExpected)
 	}
 	csvTypeExpected := "swedbank"
 	if config.CSVType != csvTypeExpected {
 		t.Errorf("CSVType parsed incorrectly. Got %s, expected %s", config.CSVType, csvTypeExpected)
 	}
 
+}
+
+func TestParseConfigWithoutDates(t *testing.T) {
+	config, err := parseConfig([]byte(`ledger: "test-ledger.beancount"`))
+	if err != nil {
+		t.Fatalf("Parsing the configuration YAML lead to error: %v", err)
+	}
+	if !config.StartDate.IsZero() || !config.EndDate.IsZero() {
+		t.Errorf("Dates should be zero when not specified. Got %v - %v", config.StartDate, config.EndDate)
+	}
+}
+
+func TestParseConfigInvalidDate(t *testing.T) {
+	for _, c := range []string{`from_date: "2021-13-01"`, `until_date: "01/12/2021"`} {
+		if _, err := parseConfig([]byte(c)); err == nil {
+			t.Errorf("Expected an error for invalid date in %q", c)
+		}
+	}
 }
 
 func TestReadConfig(t *testing.T) {
