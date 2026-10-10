@@ -1,12 +1,11 @@
 package models
 
 import (
-	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v3"
 	"os"
 	"time"
+
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Date is a calendar date read from YAML in YYYY-MM-DD format.
@@ -32,37 +31,23 @@ type Config struct {
 }
 
 func parseConfig(yamlData []byte) (Config, error) {
-	var config Config
+	config := Config{
+		MappingFile:     "mappings.yaml",
+		CSVFile:         "statement.csv",
+		BeancountLedger: "ledger.beancount",
+	}
 	err := yaml.Unmarshal(yamlData, &config)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not parse config file.")
-		return config, errors.New("Failed to validate config file")
-	}
-	// Set defaults
-	if config.MappingFile == "" {
-		config.MappingFile = "mappings.yaml"
-	}
-	if config.CSVFile == "" {
-		config.CSVFile = "statement.csv"
-	}
-	if config.BeancountLedger == "" {
-		config.BeancountLedger = "ledger.beancount"
-	}
-	return config, nil
-
+	return config, err
 }
 
 func ReadConfig(configFile string) (Config, error) {
-	var config Config
-	yamlFile, err := os.ReadFile(configFile)
+	data, err := os.ReadFile(configFile)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not read config file")
-		return config, errors.New("Failed to read config file")
+		return Config{}, fmt.Errorf("reading config: %w", err)
 	}
-	config, err = parseConfig(yamlFile)
-	return config, err
+	config, err := parseConfig(data)
+	if err != nil {
+		return Config{}, fmt.Errorf("parsing config %s: %w", configFile, err)
+	}
+	return config, nil
 }

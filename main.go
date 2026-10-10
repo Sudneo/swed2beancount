@@ -10,89 +10,75 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/sudneo/swed2beancount/models"
 	"github.com/sudneo/swed2beancount/parsers"
-	"github.com/sudneo/swed2beancount/utils"
 )
 
-func init() {
-	log.SetFormatter(&log.TextFormatter{})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
-}
+const uncategorizedAccount = "UNCATEGORIZED_ACCOUNT"
 
-func ProcessTransactions(t []models.Transaction, defaultAccount models.Account, mappings models.Mappings) []models.Transaction {
-	var processedTransactions []models.Transaction
-	for _, transaction := range t {
-		match, desc := transaction.Categorize(mappings)
-		var matchAccount models.Account
-		if match != "" {
-			matchAccount.Name = match
-		} else {
-			matchAccount.Name = "UNCATEGORIZED_ACCOUNT"
-		}
-		processed := transaction
-		if desc != "" {
-			processed.Description = desc
-		}
-		if transaction.Type == "debit" {
-			processed.DebitAccount = defaultAccount
-			processed.CreditAccount = matchAccount
-		} else {
-			processed.DebitAccount = matchAccount
-			processed.CreditAccount = defaultAccount
-		}
-		processedTransactions = append(processedTransactions, processed)
-	}
-	return processedTransactions
-}
-
-func FilterTransactionsByDate(startDate time.Time, endDate time.Time, transactions []models.Transaction) []models.Transaction {
-	var t []models.Transaction
-	for _, transaction := range transactions {
-		if (transaction.Date.After(startDate) || transaction.Date.Equal(startDate)) && (transaction.Date.Before(endDate) || transaction.Date.Equal(endDate)) {
-			t = append(t, transaction)
-		}
-	}
-	return t
-}
-
-func GenerateOutput(outfile string, transactions []models.Transaction) error {
-	PageData := `{{ range . }}
+var outputTemplate = template.Must(template.New("output").Parse(`{{ range . }}
 {{ .Date.Format "2006-01-02" }} * "{{ .Description }}"
-	{{ .CreditAccount.Name }} {{ .Amount }} {{ .Currency }}
-	{{ .DebitAccount.Name }} -{{ .Amount }} {{ .Currency }} 
+	{{ .CreditAccount }} {{ .Amount }} {{ .Currency }}
+	{{ .DebitAccount }} -{{ .Amount }} {{ .Currency }} 
 {{ end }}
-`
+`))
 
-	t := template.Must(template.New("Config").Parse(PageData))
+func processTransactions(transactions []models.Transaction, defaultAccount string, mappings models.Mappings) []models.Transaction {
+	processed := make([]models.Transaction, 0, len(transactions))
+	for _, t := range transactions {
+		account, desc := t.Categorize(mappings)
+		if account == "" {
+			account = uncategorizedAccount
+		}
+		if desc != "" {
+			t.Description = desc
+		}
+		if t.Type == "debit" {
+			t.DebitAccount, t.CreditAccount = defaultAccount, account
+		} else {
+			t.DebitAccount, t.CreditAccount = account, defaultAccount
+		}
+		processed = append(processed, t)
+	}
+	return processed
+}
 
+// filterTransactionsByDate keeps the transactions within [start, end].
+// A zero start or end leaves that side of the range open.
+func filterTransactionsByDate(start, end time.Time, transactions []models.Transaction) []models.Transaction {
+	var filtered []models.Transaction
+	for _, t := range transactions {
+		if (start.IsZero() || !t.Date.Before(start)) && (end.IsZero() || !t.Date.After(end)) {
+			filtered = append(filtered, t)
+		}
+	}
+	return filtered
+}
+
+func generateOutput(outfile string, transactions []models.Transaction) error {
 	f, err := os.Create(outfile)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"File":  outfile,
-			"Error": err,
-		}).Error("Failed to create output file")
-		return errors.New("Failed to render template: cannot create the output file")
+		return err
 	}
-	t.Execute(f, transactions)
-	return nil
+	if err := outputTemplate.Execute(f, transactions); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }
 
-func Run(config models.Config) error {
+func run(config models.Config) error {
 	if config.DefaultAccount == "" {
-		log.Error("The Default account should be provided either through command-line flag or through the config file.")
-		panic("No default account")
+		return errors.New("the default account should be provided either through the -a flag or through the config file")
 	}
-	defaultAccount := models.Account{Name: config.DefaultAccount}
-	accounts := utils.GetAccounts(config.BeancountLedger)
-	log.WithFields(log.Fields{
-		"Accounts": len(accounts),
-	}).Info("Found beancount accounts")
+	accounts, err := models.ReadAccounts(config.BeancountLedger)
+	if err != nil {
+		return err
+	}
+	log.WithField("Accounts", len(accounts)).Info("Found beancount accounts")
 	m, err := models.ReadMapping(config.MappingFile)
 	if err != nil {
 		return err
 	}
-	err = m.ValidateMappings(accounts)
-	if err != nil {
+	if err := m.Validate(accounts); err != nil {
 		return err
 	}
 	log.Info("Mappings validated")
@@ -100,45 +86,32 @@ func Run(config models.Config) error {
 	if err != nil {
 		return err
 	}
-	log.WithFields(log.Fields{
-		"Transactions": len(transactions),
-	}).Info("Found and parsed transactions")
-	if !config.StartDate.IsZero() && !config.EndDate.IsZero() {
-		transactions = FilterTransactionsByDate(config.StartDate.Time, config.EndDate.Time, transactions)
-		if len(transactions) == 0 {
-			log.Warning("The Start/End date specified in the configuration file are filtering out all the transactions.")
-		}
+	log.WithField("Transactions", len(transactions)).Info("Found and parsed transactions")
+	transactions = filterTransactionsByDate(config.StartDate.Time, config.EndDate.Time, transactions)
+	if len(transactions) == 0 {
+		log.Warning("No transactions to write. Check the from_date/until_date range.")
 	}
-	transactions = ProcessTransactions(transactions, defaultAccount, m)
-	err = GenerateOutput(config.OutputFile, transactions)
-	if err != nil {
-		return err
-	}
-	return nil
+	return generateOutput(config.OutputFile, processTransactions(transactions, config.DefaultAccount, m))
 }
 
 func main() {
-	configPtr := flag.String("config", "config.yaml", "The config file to use")
-	accountPtr := flag.String("a", "", "The default beancount account to use for the CSV transactions")
-	verbosePtr := flag.Bool("v", false, "Set logging to Debug level")
-
+	configFile := flag.String("config", "config.yaml", "The config file to use")
+	account := flag.String("a", "", "The default beancount account to use for the CSV transactions")
+	verbose := flag.Bool("v", false, "Set logging to Debug level")
 	flag.Parse()
 
-	if *verbosePtr {
+	if *verbose {
 		log.SetLevel(log.DebugLevel)
 	}
-	c, err := models.ReadConfig(*configPtr)
+	c, err := models.ReadConfig(*configFile)
 	if err != nil {
-		log.Error(err)
-		return
+		log.Fatal(err)
 	}
-	// The default account flag should override the config one if it exists
-	if *accountPtr != "" {
-		c.DefaultAccount = *accountPtr
+	// The default account flag overrides the config one
+	if *account != "" {
+		c.DefaultAccount = *account
 	}
-	err = Run(c)
-
-	if err != nil {
+	if err := run(c); err != nil {
 		log.Fatal(err)
 	}
 }

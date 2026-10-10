@@ -2,10 +2,10 @@ package models
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"os"
+	"slices"
 
-	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -15,22 +15,19 @@ type Mapping struct {
 	Contains            string `yaml:"contains"`
 	Field               string `yaml:"field"`
 	Account             string `yaml:"account"`
-	CreditOnly          bool   `yaml:"credit_only"`
-	DebitOnly           bool   `yaml:"debit_only"`
 	DescriptionOverride string `yaml:"desc_override"`
 }
 
 func ReadMapping(file string) (Mappings, error) {
-	var m Mappings
-	yamlFile, err := os.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not read mapping file")
-		return m, errors.New("Failed to read mapping file")
+		return nil, fmt.Errorf("reading mappings: %w", err)
 	}
-	m, err = parseMappings(yamlFile)
-	return m, err
+	m, err := parseMappings(data)
+	if err != nil {
+		return nil, fmt.Errorf("parsing mappings %s: %w", file, err)
+	}
+	return m, nil
 }
 
 func parseMappings(yamlData []byte) (Mappings, error) {
@@ -39,46 +36,21 @@ func parseMappings(yamlData []byte) (Mappings, error) {
 	// (e.g., the old "type", "amount" or "date_begin") are reported.
 	decoder := yaml.NewDecoder(bytes.NewReader(yamlData))
 	decoder.KnownFields(true)
-	err := decoder.Decode(&m)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"Error": err,
-		}).Error("Could not parse mapping file.")
-		return m, errors.New("Failed to parse mapping file")
+	if err := decoder.Decode(&m); err != nil {
+		return nil, err
 	}
 	return m, nil
 }
 
-func (m *Mappings) ValidateMappings(accounts []Account) error {
-	for _, mapping := range *m {
-		// Validate Field
-		if mapping.Field != "" && mapping.Field != "beneficiary" && mapping.Field != "details" {
-			log.WithFields(log.Fields{
-				"Field": "Field",
-				"Value": mapping.Field,
-			}).Error("Unrecognized value in mapping")
-			return errors.New("Failed to validate mappings")
-		}
-		// Validate account
-		validAccount := false
-		for _, a := range accounts {
-			if mapping.Account == a.Name {
-				validAccount = true
-			}
-		}
-		if !validAccount {
-			log.WithFields(log.Fields{
-				"Field": "Account",
-				"Value": mapping.Account,
-			}).Error("Unrecognized value in mapping")
-			return errors.New("Failed to validate mappings")
-		}
-		if mapping.Contains == "" {
-			log.WithFields(log.Fields{
-				"Field": "Contains",
-				"Value": mapping.Contains,
-			}).Error("Cannot use empty 'contains' in a mapping")
-			return errors.New("Failed to validate mappings")
+func (m Mappings) Validate(accounts []string) error {
+	for i, mapping := range m {
+		switch {
+		case mapping.Contains == "":
+			return fmt.Errorf("mapping %d: 'contains' cannot be empty", i+1)
+		case mapping.Field != "" && mapping.Field != "beneficiary" && mapping.Field != "details":
+			return fmt.Errorf("mapping %d: unrecognized field %q (want beneficiary or details)", i+1, mapping.Field)
+		case !slices.Contains(accounts, mapping.Account):
+			return fmt.Errorf("mapping %d: account %q is not opened in the ledger", i+1, mapping.Account)
 		}
 	}
 	return nil

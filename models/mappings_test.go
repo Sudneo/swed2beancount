@@ -27,8 +27,8 @@ func TestParseMappingsRejectsRemovedOptions(t *testing.T) {
 	}
 }
 
-func TestValidateMappings(t *testing.T) {
-	accounts := []Account{{Name: "Expenses:Food"}}
+func TestValidate(t *testing.T) {
+	accounts := []string{"Expenses:Food"}
 	cases := []struct {
 		name    string
 		mapping Mapping
@@ -42,7 +42,7 @@ func TestValidateMappings(t *testing.T) {
 	}
 	for _, c := range cases {
 		m := Mappings{c.mapping}
-		err := m.ValidateMappings(accounts)
+		err := m.Validate(accounts)
 		if (err != nil) != c.wantErr {
 			t.Errorf("%s: got error %v, wantErr %v", c.name, err, c.wantErr)
 		}

@@ -26,7 +26,7 @@ until_date: "2021-12-31"
 This will use the specified ledger to source accounts (used for validation) but it **will not** modify it.
 The output will be placed in the file specified in `output_file`.
 
-Dates can be omitted. Most of the values have defaults:
+`from_date` and `until_date` are inclusive and each can be omitted to leave that side of the range open. Most of the other values have defaults:
 
 ```yaml
 ledger: ledger.beancount

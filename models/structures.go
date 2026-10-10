@@ -1,21 +1,16 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/text/language"
-	"golang.org/x/text/search"
 )
-
-type Account struct {
-	Name string
-}
 
 type Transaction struct {
 	Type          string
-	CreditAccount Account
-	DebitAccount  Account
+	CreditAccount string
+	DebitAccount  string
 	Amount        float64
 	Description   string
 	Currency      string
@@ -23,29 +18,22 @@ type Transaction struct {
 	Date          time.Time
 }
 
-func stringMatch(str string, substr string) bool {
-	m := search.New(language.Und, search.IgnoreCase)
-	start, _ := m.IndexString(str, substr)
-	if start == -1 {
-		return false
-	}
-	return true
+func containsFold(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
-func (t *Transaction) Categorize(m Mappings) (string, string) {
-
-	// Returns the account of the first mapping match, if no match, returns an empty account
-	matchAccount := ""
-	descriptionOverride := ""
+// Categorize returns the account and description override of the first
+// matching mapping, or empty strings if no mapping matches.
+func (t Transaction) Categorize(m Mappings) (string, string) {
 	for _, mapping := range m {
-		matched := false
+		var matched bool
 		switch mapping.Field {
 		case "beneficiary":
-			matched = stringMatch(t.Beneficiary, mapping.Contains)
+			matched = containsFold(t.Beneficiary, mapping.Contains)
 		case "details":
-			matched = stringMatch(t.Description, mapping.Contains)
+			matched = containsFold(t.Description, mapping.Contains)
 		default:
-			matched = stringMatch(t.Beneficiary, mapping.Contains) || stringMatch(t.Description, mapping.Contains)
+			matched = containsFold(t.Beneficiary, mapping.Contains) || containsFold(t.Description, mapping.Contains)
 		}
 		if matched {
 			log.WithFields(log.Fields{
@@ -55,5 +43,5 @@ func (t *Transaction) Categorize(m Mappings) (string, string) {
 			return mapping.Account, mapping.DescriptionOverride
 		}
 	}
-	return matchAccount, descriptionOverride
+	return "", ""
 }
