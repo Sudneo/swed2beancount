@@ -25,7 +25,6 @@ type Config struct {
 	MappingFile     string `yaml:"mappings_file"`
 	OutputFile      string `yaml:"output_file"`
 	CSVFile         string `yaml:"csv_file"`
-	CSVType         string `yaml:"csv_type"`
 	BeancountLedger string `yaml:"ledger"`
 	StartDate       Date   `yaml:"from_date,omitempty"`
 	EndDate         Date   `yaml:"until_date,omitempty"`
@@ -47,9 +46,6 @@ func parseConfig(yamlData []byte) (Config, error) {
 	}
 	if config.CSVFile == "" {
 		config.CSVFile = "statement.csv"
-	}
-	if config.CSVType == "" {
-		config.CSVType = "swedbank"
 	}
 	if config.BeancountLedger == "" {
 		config.BeancountLedger = "ledger.beancount"

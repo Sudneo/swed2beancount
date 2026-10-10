@@ -34,10 +34,6 @@ until_date: "2021-12-30"`)
 	if !config.StartDate.Equal(dateStartExpected) || !config.EndDate.Equal(dateEndExpected) {
 		t.Errorf("Date parsing is incorrect. Got %v - %v, expected %v - %v", config.StartDate, config.EndDate, dateStartExpected, dateEndExpected)
 	}
-	csvTypeExpected := "swedbank"
-	if config.CSVType != csvTypeExpected {
-		t.Errorf("CSVType parsed incorrectly. Got %s, expected %s", config.CSVType, csvTypeExpected)
-	}
 
 }
 

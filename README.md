@@ -1,6 +1,6 @@
 # Beancount CSV Parser
 
-This simple tool is just some util I wrote to help importing CSV files into beancount format. The tool was initially specifically written for Swedbank CSV export, but I made it so that it can be used for different formats as well, with little code modification.
+This simple tool is just some util I wrote to help importing CSV files into beancount format. The tool only supports the Swedbank CSV statement export.
 
 ## Features
 
@@ -17,7 +17,6 @@ This simple tool is just some util I wrote to help importing CSV files into bean
 ```yaml
 ledger: "ledger.beancount"
 csv_file: "statement.csv"
-csv_type: "swedbank"
 mappings_file: "mappings.yaml"
 output_file: "shared.beancount"
 from_date: "2021-10-01"
@@ -33,7 +32,6 @@ Dates can be omitted. Most of the values have defaults:
 ledger: ledger.beancount
 mappings_file: mappings.yaml
 csv_file: statement.csv
-csv_type: swedbank
 ```
 
 2. Choose the default account to use for transactions. Since this is supposed to be a CSV parser, it is assumed that the export is for one specific account (e.g., Assets:Bank:Checking). This is the account that will be the implicit 'leg' of each transaction (+ for credits, - for debits).
@@ -77,18 +75,3 @@ Then it is possible to run the tool as follows:
 ```bash
 ./csv2beancount [-config config.yaml] -a "Assets:Bank:Checking"
 ```
-
-## Additional Parsers
-
-A new parser can be easily added by adding one more case to the `parsers.go` file.
-It is expected that the following data will be availabe:
-
-* Date
-* Beneficiary
-* Details
-* Amount
-* Currency
-* Type (debit/credit)
-
-The new parsing function will need to populate a list of `models.Transaction` with the data from the CSV. The logic can be implemented completely independent.
-For example, if the CSV export contains amounts with positive and negative signs, this can be used to generate transaction with the positive amount and manually set the 'type' to 'credit'/'debit' depending on the sign.

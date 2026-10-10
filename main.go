@@ -96,7 +96,7 @@ func Run(config models.Config) error {
 		return err
 	}
 	log.Info("Mappings validated")
-	transactions, err := parsers.ParseCSV(config.CSVFile, config.CSVType)
+	transactions, err := parsers.ParseCSV(config.CSVFile)
 	if err != nil {
 		return err
 	}

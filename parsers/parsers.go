@@ -11,22 +11,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ParseCSV(file string, csvType string) ([]models.Transaction, error) {
+// ParseCSV parses a Swedbank CSV statement export.
+func ParseCSV(file string) ([]models.Transaction, error) {
 	var transactions []models.Transaction
 	records, err := utils.ReadCsvFile(file)
 	if err != nil {
 		log.Error("Failed to parse CSV")
 		return transactions, err
 	}
-	switch csvType {
-	case "swedbank":
-		transactions, err := parseSwedbank(records)
-		if err != nil {
-			return transactions, err
-		}
-		return transactions, nil
-	}
-	return transactions, nil
+	return parseSwedbank(records)
 }
 
 func parseSwedbank(records [][]string) ([]models.Transaction, error) {
