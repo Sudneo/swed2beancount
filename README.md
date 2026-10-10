@@ -5,9 +5,7 @@ This simple tool is just some util I wrote to help importing CSV files into bean
 ## Features
 
 * Mapping between CSV transaction and Beancount accounts
-    * Date range (e.g., during a certain timeframe all the transaction should be to the Expenses:Trip account)
     * Text match (on remitter/beneficiary and/or on the details/description)
-    * Amount match (e.g., always match 457.89 transactions to rent Expenses:Rent account)
 * Automatically generate beancount-like file 
 * Validates data in configuration and mappings (e.g., invalid account name)
 * Select date range for the transactions to consider (.e.g, month by month on a full-year export)
@@ -43,45 +41,24 @@ csv_type: swedbank
 3. Create a mapping file with rules such as:
 
 ```yaml
-- type: text
-  contains: "HACKTHEBOX"
+- contains: "HACKTHEBOX"
   field: "beneficiary"
   account: "Expenses:HTB"
   desc_override: "Hackthebox Subscription"
-- type: text
-  contains: "RIMI EESTI FOOD AS"
+- contains: "RIMI EESTI FOOD AS"
   field: "details"
   account: "Expenses:Food:Groceries"
   desc_override: "Grocery - Rimi"
-- type: amount
-  amount: "457.89"
-  desc_override: "Rent"
-  account: "Expenses:Rent"
-- type: date
-  date_begin: "2021-06-01"
-  date_end: "2021-07-01"
-  desc_override: "Trip to Saturn"
-  account: "Expenses:Trip""
 ```
 
-The `type` can be `text`, `amount` and `date`. The matching is done from top to bottom, which means that if multiple rules match, the first match will be the used one. For this, consider moving the `date` matches upper.
+Each rule matches transactions that contain some string in the remitter/beneficiary or in the description. The matching is case-insensitive and is done from top to bottom, which means that if multiple rules match, the first match will be the used one.
 
-The matching can be used as follows:
-
-* `text` matches can be used for transactions that have some kind of string in the remitter/beneficiary or description.
-* `date` matches can be used for example for trips. All transactions in the specified date range will be assigned to the specified account.
-* `amount` matches are for recurring transactions with exactly the same cost.
-
-If the match is of type `text` then additional fields need to be set:
+Each rule has the following fields:
 
 * `contains`: The string to search
 * `field` (optional): `beneficiary` or `details` to restrict the matching to one of the two fields only. If not specified, both fields will be evaluated.
 
-If the match is of type `date`, then additional fields need to be set:
-* `date_begin`: formatted `YYYY-MM-DD`
-* `date_end`: formatted `YYYY-MM-DD`
-
-In any case the `account` field needs to be specified and needs to match a beancount account present in the ledger specified in the config file.
+The `account` field always needs to be specified and needs to match a beancount account present in the ledger specified in the config file.
 
 Additionally, the `desc_override` can be set to override the description for the transaction that matches that particular rule. If not specified, the details/description available in the CSV will be used.
 

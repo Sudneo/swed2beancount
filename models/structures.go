@@ -38,31 +38,21 @@ func (t *Transaction) Categorize(m Mappings) (string, string) {
 	matchAccount := ""
 	descriptionOverride := ""
 	for _, mapping := range m {
-		// Text Matching
-		matchBeneficiary := stringMatch(t.Beneficiary, mapping.Contains)
-		matchDetails := stringMatch(t.Description, mapping.Contains)
-		if mapping.Field == "beneficiary" && matchBeneficiary {
-			// Match beneficiary text
-			log.WithFields(log.Fields{
-				"Match": mapping.Account,
-				"Type":  "Beneficiary",
-			}).Debug("Found match for transaction")
-			return mapping.Account, mapping.DescriptionOverride
+		matched := false
+		switch mapping.Field {
+		case "beneficiary":
+			matched = stringMatch(t.Beneficiary, mapping.Contains)
+		case "details":
+			matched = stringMatch(t.Description, mapping.Contains)
+		default:
+			matched = stringMatch(t.Beneficiary, mapping.Contains) || stringMatch(t.Description, mapping.Contains)
 		}
-		if mapping.Field == "details" && matchDetails {
+		if matched {
 			log.WithFields(log.Fields{
 				"Match": mapping.Account,
-				"Type":  "Details",
+				"Field": mapping.Field,
 			}).Debug("Found match for transaction")
 			return mapping.Account, mapping.DescriptionOverride
-		} else {
-			if matchDetails || matchBeneficiary {
-				log.WithFields(log.Fields{
-					"Match": mapping.Account,
-					"Type":  "Text",
-				}).Debug("Found match for transaction")
-				return mapping.Account, mapping.DescriptionOverride
-			}
 		}
 	}
 	return matchAccount, descriptionOverride

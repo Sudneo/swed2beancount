@@ -3,7 +3,7 @@
   account: "Expenses:HTB"
   desc_override: "Hackthebox Subscription"
 - contains: "RIMI EESTI FOOD AS"
-  field: "details"
+  field: "beneficiary"
   account: "Expenses:Food:Groceries"
   desc_override: "Grocery - Rimi"
 - contains: "salary"

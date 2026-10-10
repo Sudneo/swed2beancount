@@ -91,7 +91,10 @@ func Run(config models.Config) error {
 	if err != nil {
 		return err
 	}
-	m.ValidateMappings(accounts)
+	err = m.ValidateMappings(accounts)
+	if err != nil {
+		return err
+	}
 	log.Info("Mappings validated")
 	transactions, err := parsers.ParseCSV(config.CSVFile, config.CSVType)
 	if err != nil {
@@ -136,6 +139,6 @@ func main() {
 	err = Run(c)
 
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 }
